@@ -108,12 +108,42 @@
           <button class="btn-cancel" @click="cancelAutoOpen">取消</button>
         </div>
 
-        <!-- 破解后的二维码 -->
-        <div v-if="parsedUrl" class="qr-result">
+        <!-- 微信/普通模式切换 -->
+        <div v-if="parsedUrl" class="mode-tabs">
+          <button 
+            class="mode-tab" 
+            :class="{ active: !showWechatMode }"
+            @click="showWechatMode = false"
+          >
+            普通模式
+          </button>
+          <button 
+            class="mode-tab" 
+            :class="{ active: showWechatMode }"
+            @click="showWechatMode = true"
+          >
+            微信模式
+          </button>
+        </div>
+
+        <!-- 普通模式二维码 -->
+        <div v-if="parsedUrl && !showWechatMode" class="qr-result">
           <div class="qr-display">
             <qrcode-vue :value="realtimeUrl" :size="180" level="H" />
           </div>
-          <p class="qr-hint">⏱ 实时刷新中，可直接扫码</p>
+          <p class="qr-hint">⏱ 实时刷新中，普通浏览器扫码</p>
+        </div>
+
+        <!-- 微信模式二维码 -->
+        <div v-if="parsedUrl && showWechatMode" class="qr-result wechat-mode">
+          <div class="qr-display">
+            <qrcode-vue :value="wechatCompatibleUrl" :size="180" level="H" />
+          </div>
+          <p class="qr-hint wechat">💚 微信专用，扫码后点击按钮签到</p>
+          <p class="wechat-tips">
+            微信扫码后会显示"立即签到"按钮<br>
+            点击即可跳转到签到页面
+          </p>
         </div>
 
         <!-- 无法解析 -->
@@ -196,6 +226,8 @@ const parsedUrl = ref<{
 } | null>(null);
 
 const realtimeUrl = ref('');
+const wechatCompatibleUrl = ref(''); // 微信兼容链接
+const showWechatMode = ref(false); // 显示微信模式
 
 const isValidParsedUrl = computed(() => 
   parsedUrl.value && parsedUrl.value.baseUrl && parsedUrl.value.taskId
@@ -225,6 +257,41 @@ const generateRealtimeUrl = () => {
   } else {
     realtimeUrl.value = `${baseUrl}/${taskId}/${newTimestamp}/${newTimestamp}`;
   }
+  // 同时生成微信兼容链接
+  generateWechatCompatibleUrl();
+};
+
+// 生成微信兼容链接
+const generateWechatCompatibleUrl = () => {
+  if (!realtimeUrl.value) return;
+  
+  // 创建一个数据页面，绕过微信检测
+  const htmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>签到</title>
+  <style>
+    body { font-family: -apple-system, sans-serif; text-align: center; padding: 50px 20px; }
+    .btn { display: inline-block; padding: 15px 40px; background: #07c160; color: white; 
+           text-decoration: none; border-radius: 8px; font-size: 18px; margin-top: 20px; }
+    .tips { color: #666; font-size: 14px; margin-top: 30px; }
+  </style>
+</head>
+<body>
+  <h2>🎓 课堂签到</h2>
+  <p>点击下方按钮完成签到</p>
+  <a href="${realtimeUrl.value}" class="btn">立即签到</a>
+  <p class="tips">如无法打开，请复制链接到浏览器访问</p>
+</body>
+</html>`;
+  
+  // 创建 data URL - 使用 encodeURIComponent 和 btoa
+  const encoded = encodeURIComponent(htmlContent).replace(/%([0-9A-F]{2})/g, (_, p1) => String.fromCharCode(parseInt(p1, 16)));
+  const dataUrl = 'data:text/html;base64,' + btoa(encoded);
+  wechatCompatibleUrl.value = dataUrl;
 };
 
 // 启动刷新定时器
@@ -1029,6 +1096,62 @@ onBeforeUnmount(() => {
 
 .btn-cancel:hover {
   background: rgba(255, 255, 255, 0.3);
+}
+
+/* 模式切换标签 */
+.mode-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+  padding: 4px;
+  background: #f3f4f6;
+  border-radius: 10px;
+}
+
+.mode-tab {
+  flex: 1;
+  padding: 10px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: #6b7280;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.mode-tab.active {
+  background: white;
+  color: #111827;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.mode-tab:hover:not(.active) {
+  color: #374151;
+}
+
+/* 微信模式样式 */
+.qr-result.wechat-mode {
+  background: linear-gradient(135deg, #07c160 0%, #05a050 100%);
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.qr-result.wechat-mode .qr-display {
+  background: white;
+}
+
+.qr-hint.wechat {
+  color: white !important;
+  font-weight: 600;
+}
+
+.wechat-tips {
+  color: rgba(255,255,255,0.9);
+  font-size: 12px;
+  margin-top: 10px;
+  line-height: 1.6;
 }
 
 /* 错误提示 */
