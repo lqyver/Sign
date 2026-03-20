@@ -69,11 +69,13 @@
     </div>
 
     <!-- 自动打开开关 -->
-    <div v-if="!scannedResult" class="auto-open-toggle">
+    <div class="auto-open-toggle">
       <label class="toggle-switch">
-        <input type="checkbox" v-model="autoOpenEnabled" />
+        <input type="checkbox" v-model="autoOpenEnabled" :disabled="countdown > 0" />
         <span class="toggle-slider"></span>
-        <span class="toggle-label">扫描成功后自动打开破解链接</span>
+        <span class="toggle-label">
+          {{ countdown > 0 ? '自动打开已启动' : '扫描成功后自动打开破解链接' }}
+        </span>
       </label>
     </div>
 
