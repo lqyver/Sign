@@ -108,42 +108,12 @@
           <button class="btn-cancel" @click="cancelAutoOpen">取消</button>
         </div>
 
-        <!-- 微信/普通模式切换 -->
-        <div v-if="parsedUrl" class="mode-tabs">
-          <button 
-            class="mode-tab" 
-            :class="{ active: !showWechatMode }"
-            @click="showWechatMode = false"
-          >
-            普通模式
-          </button>
-          <button 
-            class="mode-tab" 
-            :class="{ active: showWechatMode }"
-            @click="showWechatMode = true"
-          >
-            微信模式
-          </button>
-        </div>
-
-        <!-- 普通模式二维码 -->
-        <div v-if="parsedUrl && !showWechatMode" class="qr-result">
+        <!-- 破解后的二维码 -->
+        <div v-if="parsedUrl" class="qr-result">
           <div class="qr-display">
             <qrcode-vue :value="realtimeUrl" :size="180" level="H" />
           </div>
-          <p class="qr-hint">⏱ 实时刷新中，普通浏览器扫码</p>
-        </div>
-
-        <!-- 微信模式二维码 -->
-        <div v-if="parsedUrl && showWechatMode" class="qr-result wechat-mode">
-          <div class="qr-display">
-            <qrcode-vue :value="wechatCompatibleUrl" :size="180" level="H" />
-          </div>
-          <p class="qr-hint wechat">💚 微信专用，扫码后点击按钮签到</p>
-          <p class="wechat-tips">
-            微信扫码后会显示"立即签到"按钮<br>
-            点击即可跳转到签到页面
-          </p>
+          <p class="qr-hint">⏱ 实时刷新中，可直接扫码</p>
         </div>
 
         <!-- 无法解析 -->
@@ -163,6 +133,42 @@
         <button class="btn-secondary" @click="restartScan">
           重新扫描
         </button>
+      </div>
+
+      <!-- 微信打开提示 -->
+      <div v-if="parsedUrl" class="weixin-hint">
+        <div class="hint-header">
+          <span>💡</span>
+          <strong>微信环境提示</strong>
+        </div>
+        <p class="hint-text">
+          如果需要在微信中打开，请使用以下方式：
+        </p>
+        <div class="hint-options">
+          <button class="hint-btn" @click="tryOpenInWeixin">
+            <span>📱</span>
+            <span>尝试调起微信</span>
+          </button>
+          <button class="hint-btn secondary" @click="showWeixinQr = true">
+            <span>🔗</span>
+            <span>生成微信跳转码</span>
+          </button>
+        </div>
+        <p class="hint-note">
+          注：浏览器限制无法直接调起微信，建议复制链接发送给微信好友后打开
+        </p>
+      </div>
+
+      <!-- 微信跳转二维码弹窗 -->
+      <div v-if="showWeixinQr" class="weixin-modal" @click.self="showWeixinQr = false">
+        <div class="modal-content">
+          <h4>用微信扫描此码打开</h4>
+          <div class="weixin-qr-display">
+            <qrcode-vue :value="realtimeUrl" :size="200" level="H" />
+          </div>
+          <p class="modal-tip">截图保存，用微信扫一扫</p>
+          <button class="modal-close" @click="showWeixinQr = false">关闭</button>
+        </div>
       </div>
     </div>
 
@@ -213,6 +219,7 @@ const videoDebugInfo = ref('');
 const blockedDeviceIds = ref<Set<string>>(new Set());
 const autoOpenEnabled = ref(false); // 自动打开链接开关
 const countdown = ref(0); // 倒计时
+const showWeixinQr = ref(false); // 显示微信二维码弹窗
 let stream: MediaStream | null = null;
 let scanInterval: number | null = null;
 let refreshTimer: number | null = null;
@@ -226,8 +233,6 @@ const parsedUrl = ref<{
 } | null>(null);
 
 const realtimeUrl = ref('');
-const wechatCompatibleUrl = ref(''); // 微信兼容链接
-const showWechatMode = ref(false); // 显示微信模式
 
 const isValidParsedUrl = computed(() => 
   parsedUrl.value && parsedUrl.value.baseUrl && parsedUrl.value.taskId
@@ -257,41 +262,6 @@ const generateRealtimeUrl = () => {
   } else {
     realtimeUrl.value = `${baseUrl}/${taskId}/${newTimestamp}/${newTimestamp}`;
   }
-  // 同时生成微信兼容链接
-  generateWechatCompatibleUrl();
-};
-
-// 生成微信兼容链接
-const generateWechatCompatibleUrl = () => {
-  if (!realtimeUrl.value) return;
-  
-  // 创建一个数据页面，绕过微信检测
-  const htmlContent = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>签到</title>
-  <style>
-    body { font-family: -apple-system, sans-serif; text-align: center; padding: 50px 20px; }
-    .btn { display: inline-block; padding: 15px 40px; background: #07c160; color: white; 
-           text-decoration: none; border-radius: 8px; font-size: 18px; margin-top: 20px; }
-    .tips { color: #666; font-size: 14px; margin-top: 30px; }
-  </style>
-</head>
-<body>
-  <h2>🎓 课堂签到</h2>
-  <p>点击下方按钮完成签到</p>
-  <a href="${realtimeUrl.value}" class="btn">立即签到</a>
-  <p class="tips">如无法打开，请复制链接到浏览器访问</p>
-</body>
-</html>`;
-  
-  // 创建 data URL - 使用 encodeURIComponent 和 btoa
-  const encoded = encodeURIComponent(htmlContent).replace(/%([0-9A-F]{2})/g, (_, p1) => String.fromCharCode(parseInt(p1, 16)));
-  const dataUrl = 'data:text/html;base64,' + btoa(encoded);
-  wechatCompatibleUrl.value = dataUrl;
 };
 
 // 启动刷新定时器
@@ -376,6 +346,37 @@ const cancelAutoOpen = () => {
 const openRealtimeUrl = () => {
   if (realtimeUrl.value) {
     window.open(realtimeUrl.value, '_blank');
+  }
+};
+
+// 尝试在微信中打开
+const tryOpenInWeixin = () => {
+  if (!realtimeUrl.value) return;
+  
+  // 方法1：尝试使用微信 URL Scheme（仅在已安装微信的移动端有效）
+  const weixinUrl = `weixin://dl/business/?t=${encodeURIComponent(realtimeUrl.value)}`;
+  
+  // 复制到剪贴板并提示用户
+  navigator.clipboard.writeText(realtimeUrl.value).then(() => {
+    errorMessage.value = '链接已复制，请手动粘贴到微信中打开';
+    setTimeout(() => errorMessage.value = '', 3000);
+  });
+  
+  // 尝试打开（可能会失败，取决于浏览器和设备）
+  const isMobile = /Android|iPhone|iPad/i.test(navigator.userAgent);
+  if (isMobile) {
+    // 移动端尝试调起
+    window.location.href = weixinUrl;
+    // 如果3秒后还在当前页面，说明调起失败
+    setTimeout(() => {
+      if (document.visibilityState === 'visible') {
+        // 显示二维码方式
+        showWeixinQr.value = true;
+      }
+    }, 3000);
+  } else {
+    // PC端直接显示二维码
+    showWeixinQr.value = true;
   }
 };
 
@@ -504,6 +505,7 @@ const restartScan = () => {
   parsedUrl.value = null;
   stopRefreshTimer();
   cancelAutoOpen();
+  showWeixinQr.value = false;
   realtimeUrl.value = '';
 };
 
@@ -1098,62 +1100,6 @@ onBeforeUnmount(() => {
   background: rgba(255, 255, 255, 0.3);
 }
 
-/* 模式切换标签 */
-.mode-tabs {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 14px;
-  padding: 4px;
-  background: #f3f4f6;
-  border-radius: 10px;
-}
-
-.mode-tab {
-  flex: 1;
-  padding: 10px;
-  border: none;
-  border-radius: 8px;
-  background: transparent;
-  color: #6b7280;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.mode-tab.active {
-  background: white;
-  color: #111827;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-.mode-tab:hover:not(.active) {
-  color: #374151;
-}
-
-/* 微信模式样式 */
-.qr-result.wechat-mode {
-  background: linear-gradient(135deg, #07c160 0%, #05a050 100%);
-  border-radius: 12px;
-  padding: 16px;
-}
-
-.qr-result.wechat-mode .qr-display {
-  background: white;
-}
-
-.qr-hint.wechat {
-  color: white !important;
-  font-weight: 600;
-}
-
-.wechat-tips {
-  color: rgba(255,255,255,0.9);
-  font-size: 12px;
-  margin-top: 10px;
-  line-height: 1.6;
-}
-
 /* 错误提示 */
 .toast-error {
   position: fixed;
@@ -1185,5 +1131,135 @@ onBeforeUnmount(() => {
 
 .hidden {
   display: none;
+}
+
+/* 微信打开提示 */
+.weixin-hint {
+  margin-top: 16px;
+  padding: 16px;
+  background: linear-gradient(135deg, #07c160 0%, #05a050 100%);
+  border-radius: 12px;
+  color: white;
+}
+
+.hint-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  margin-bottom: 10px;
+}
+
+.hint-text {
+  font-size: 13px;
+  opacity: 0.95;
+  margin-bottom: 12px;
+}
+
+.hint-options {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.hint-btn {
+  flex: 1;
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: white;
+  border: none;
+  border-radius: 8px;
+  color: #07c160;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.hint-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.hint-btn.secondary {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+}
+
+.hint-note {
+  font-size: 11px;
+  opacity: 0.8;
+  margin: 0;
+}
+
+/* 微信二维码弹窗 */
+.weixin-modal {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.7);
+  z-index: 1000;
+  animation: fadeIn 0.2s ease;
+}
+
+.modal-content {
+  background: white;
+  padding: 24px;
+  border-radius: 16px;
+  text-align: center;
+  max-width: 280px;
+  animation: scaleIn 0.2s ease;
+}
+
+.modal-content h4 {
+  margin: 0 0 16px 0;
+  color: #111827;
+  font-size: 16px;
+}
+
+.weixin-qr-display {
+  display: inline-block;
+  padding: 16px;
+  background: #f3f4f6;
+  border-radius: 12px;
+  margin-bottom: 12px;
+}
+
+.modal-tip {
+  font-size: 13px;
+  color: #6b7280;
+  margin: 0 0 16px 0;
+}
+
+.modal-close {
+  width: 100%;
+  padding: 10px;
+  background: #07c160;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.modal-close:hover {
+  background: #05a050;
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 </style>
