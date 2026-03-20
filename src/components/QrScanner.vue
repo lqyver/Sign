@@ -518,38 +518,186 @@ const copyUrl = () => {
   setTimeout(() => errorMessage.value = '', 2000);
 };
 
+// 图像预处理：灰度化
+const grayscale = (imageData: ImageData): ImageData => {
+  const data = imageData.data;
+  for (let i = 0; i < data.length; i += 4) {
+    const gray = data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114;
+    data[i] = gray;
+    data[i + 1] = gray;
+    data[i + 2] = gray;
+  }
+  return imageData;
+};
+
+// 图像预处理：对比度增强
+const enhanceContrast = (imageData: ImageData, factor: number = 1.5): ImageData => {
+  const data = imageData.data;
+  for (let i = 0; i < data.length; i += 4) {
+    data[i] = Math.min(255, Math.max(0, (data[i] - 128) * factor + 128));
+    data[i + 1] = Math.min(255, Math.max(0, (data[i + 1] - 128) * factor + 128));
+    data[i + 2] = Math.min(255, Math.max(0, (data[i + 2] - 128) * factor + 128));
+  }
+  return imageData;
+};
+
+// 图像预处理：二值化
+const binarize = (imageData: ImageData, threshold: number = 128): ImageData => {
+  const data = imageData.data;
+  for (let i = 0; i < data.length; i += 4) {
+    const gray = data[i];
+    const value = gray > threshold ? 255 : 0;
+    data[i] = value;
+    data[i + 1] = value;
+    data[i + 2] = value;
+  }
+  return imageData;
+};
+
+// 尝试不同缩放比例识别二维码
+const tryDecodeQR = (canvas: HTMLCanvasElement, _ctx: CanvasRenderingContext2D, scale: number): string | null => {
+  const scaledCanvas = document.createElement('canvas');
+  const scaledCtx = scaledCanvas.getContext('2d');
+  if (!scaledCtx) return null;
+
+  scaledCanvas.width = canvas.width * scale;
+  scaledCanvas.height = canvas.height * scale;
+  
+  // 使用平滑缩放
+  scaledCtx.imageSmoothingEnabled = true;
+  scaledCtx.imageSmoothingQuality = 'high';
+  scaledCtx.drawImage(canvas, 0, 0, scaledCanvas.width, scaledCanvas.height);
+
+  const imageData = scaledCtx.getImageData(0, 0, scaledCanvas.width, scaledCanvas.height);
+  const code = jsQR(imageData.data, imageData.width, imageData.height, {
+    inversionAttempts: 'attemptBoth'
+  });
+
+  return code?.data || null;
+};
+
 // 处理文件上传
 const handleFileUpload = (event: Event) => {
   const target = event.target as HTMLInputElement;
   const file = target.files?.[0];
   if (!file) return;
 
+  errorMessage.value = '正在识别...';
+  
   const reader = new FileReader();
   reader.onload = (e) => {
     const img = new Image();
     img.onload = () => {
       const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return;
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      if (!ctx) {
+        errorMessage.value = '浏览器不支持';
+        return;
+      }
 
-      canvas.width = img.width;
-      canvas.height = img.height;
-      ctx.drawImage(img, 0, 0);
+      // 设置画布尺寸（限制最大尺寸避免性能问题）
+      const maxSize = 2000;
+      let width = img.width;
+      let height = img.height;
+      
+      if (width > maxSize || height > maxSize) {
+        const ratio = Math.min(maxSize / width, maxSize / height);
+        width *= ratio;
+        height *= ratio;
+      }
+      
+      canvas.width = width;
+      canvas.height = height;
+      ctx.drawImage(img, 0, 0, width, height);
 
-      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      const code = jsQR(imageData.data, imageData.width, imageData.height, {
-        inversionAttempts: 'attemptBoth'
-      });
+      let result: string | null = null;
+      
+      // 策略1：原始尺寸识别
+      if (!result) {
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const code = jsQR(imageData.data, imageData.width, imageData.height, {
+          inversionAttempts: 'attemptBoth'
+        });
+        result = code?.data || null;
+      }
+      
+      // 策略2：放大识别（小二维码适用）
+      if (!result) {
+        const scales = [1.5, 2, 2.5, 3];
+        for (const scale of scales) {
+          result = tryDecodeQR(canvas, ctx, scale);
+          if (result) break;
+        }
+      }
+      
+      // 策略3：灰度化后识别
+      if (!result) {
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        grayscale(imageData);
+        const code = jsQR(imageData.data, imageData.width, imageData.height, {
+          inversionAttempts: 'attemptBoth'
+        });
+        result = code?.data || null;
+      }
+      
+      // 策略4：对比度增强后识别
+      if (!result) {
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        enhanceContrast(imageData, 1.8);
+        const code = jsQR(imageData.data, imageData.width, imageData.height, {
+          inversionAttempts: 'attemptBoth'
+        });
+        result = code?.data || null;
+      }
+      
+      // 策略5：二值化后识别
+      if (!result) {
+        const thresholds = [100, 128, 150, 180];
+        for (const threshold of thresholds) {
+          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          grayscale(imageData);
+          binarize(imageData, threshold);
+          const code = jsQR(imageData.data, imageData.width, imageData.height, {
+            inversionAttempts: 'attemptBoth'
+          });
+          if (code?.data) {
+            result = code.data;
+            break;
+          }
+        }
+      }
+      
+      // 策略6：缩小后识别（超大二维码适用）
+      if (!result && (canvas.width > 1000 || canvas.height > 1000)) {
+        const smallCanvas = document.createElement('canvas');
+        const smallCtx = smallCanvas.getContext('2d');
+        if (smallCtx) {
+          smallCanvas.width = canvas.width * 0.5;
+          smallCanvas.height = canvas.height * 0.5;
+          smallCtx.drawImage(canvas, 0, 0, smallCanvas.width, smallCanvas.height);
+          const imageData = smallCtx.getImageData(0, 0, smallCanvas.width, smallCanvas.height);
+          const code = jsQR(imageData.data, imageData.width, imageData.height, {
+            inversionAttempts: 'attemptBoth'
+          });
+          result = code?.data || null;
+        }
+      }
 
-      if (code) {
-        scannedResult.value = code.data;
-        parseScannedUrl(code.data);
+      if (result) {
+        scannedResult.value = result;
+        parseScannedUrl(result);
         errorMessage.value = '';
       } else {
-        errorMessage.value = '无法识别图片中的二维码';
+        errorMessage.value = '无法识别图片中的二维码，请尝试：1.裁剪二维码区域 2.提高图片清晰度 3.使用摄像头直接扫描';
       }
     };
+    img.onerror = () => {
+      errorMessage.value = '图片加载失败';
+    };
     img.src = e.target?.result as string;
+  };
+  reader.onerror = () => {
+    errorMessage.value = '文件读取失败';
   };
   reader.readAsDataURL(file);
   target.value = '';
