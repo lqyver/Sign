@@ -2,8 +2,11 @@
   <div class="page-container">
     <h1>动态签到二维码方案对比</h1>
     <p class="page-subtitle">
-      下面并排展示了两种生成实时二维码的方案。右侧的“精确复现”方案是基于JS文件逆向分析后的最终版本，成功率最高。
+      下面并排展示了两种生成实时二维码的方案。右侧的"精确复现"方案是基于JS文件逆向分析后的最终版本，成功率最高。
     </p>
+
+    <!-- 二维码扫描功能 -->
+    <QrScanner />
 
     <div class="comparison-grid">
       <!-- =================================================================== -->
@@ -94,10 +97,10 @@
       </p>
       <ul>
         <li><code>timestamp</code> (第一个时间戳): 用于 **前端校验**。脚本会将其与当前设备获取的服务器时间做比较，时间差必须在4.5秒内，所以它必须是实时的。</li>
-        <li><code>server_now_validate</code> (第二个时间戳): 用于 **后端校验**。脚本会把它原封不动地编码后提交给服务器。它是一个固定的“令牌”，我们不能修改它。</li>
+        <li><code>server_now_validate</code> (第二个时间戳): 用于 **后端校验**。脚本会把它原封不动地编码后提交给服务器。它是一个固定的"令牌"，我们不能修改它。</li>
       </ul>
       <p>
-        <strong>结论：</strong> “方法一” 错误地刷新了两个时间戳，可能会导致后端验证失败。“方法二” 精确地只刷新了第一个时间戳，保留了第二个，这与目标脚本的行为完全一致，因此是**正确且可靠的方案**。
+        <strong>结论：</strong> "方法一" 错误地刷新了两个时间戳，可能会导致后端验证失败。"方法二" 精确地只刷新了第一个时间戳，保留了第二个，这与目标脚本的行为完全一致，因此是**正确且可靠的方案**。
       </p>
     </div>
   </div>
@@ -106,6 +109,7 @@
 <script setup lang="ts">
 import { ref, watch, onBeforeUnmount, computed } from 'vue';
 import QrcodeVue from 'qrcode.vue';
+import QrScanner from './QrScanner.vue';
 
 // --- 配置 ---
 const REFRESH_INTERVAL_MS = 1000; // 刷新间隔 (1秒)
