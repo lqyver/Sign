@@ -68,6 +68,15 @@
       </select>
     </div>
 
+    <!-- 自动打开开关 -->
+    <div v-if="!scannedResult" class="auto-open-toggle">
+      <label class="toggle-switch">
+        <input type="checkbox" v-model="autoOpenEnabled" />
+        <span class="toggle-slider"></span>
+        <span class="toggle-label">扫描成功后自动打开破解链接</span>
+      </label>
+    </div>
+
     <!-- 结果展示 -->
     <div v-if="scannedResult" class="result-panel">
       <div class="result-tabs">
@@ -90,6 +99,15 @@
           </div>
         </div>
 
+        <!-- 自动打开倒计时 -->
+        <div v-if="parsedUrl && countdown > 0" class="countdown-box">
+          <div class="countdown-ring">
+            <span class="countdown-num">{{ countdown }}</span>
+          </div>
+          <p>秒后自动打开破解链接</p>
+          <button class="btn-cancel" @click="cancelAutoOpen">取消</button>
+        </div>
+
         <!-- 破解后的二维码 -->
         <div v-if="parsedUrl" class="qr-result">
           <div class="qr-display">
@@ -109,7 +127,10 @@
         <button class="btn-secondary" @click="copyUrl" v-if="parsedUrl">
           复制链接
         </button>
-        <button class="btn-primary" @click="restartScan">
+        <button class="btn-primary" @click="openRealtimeUrl" v-if="parsedUrl">
+          立即打开
+        </button>
+        <button class="btn-secondary" @click="restartScan">
           重新扫描
         </button>
       </div>
@@ -160,9 +181,12 @@ const videoDevices = ref<MediaDeviceInfo[]>([]);
 const selectedDeviceId = ref('');
 const videoDebugInfo = ref('');
 const blockedDeviceIds = ref<Set<string>>(new Set());
+const autoOpenEnabled = ref(false); // 自动打开链接开关
+const countdown = ref(0); // 倒计时
 let stream: MediaStream | null = null;
 let scanInterval: number | null = null;
 let refreshTimer: number | null = null;
+let countdownTimer: number | null = null;
 
 // 解析后的URL信息
 const parsedUrl = ref<{
@@ -228,6 +252,10 @@ const parseScannedUrl = (url: string) => {
       serverNow: fullMatch[4]
     };
     startRefreshTimer();
+    // 如果开启了自动打开，启动倒计时
+    if (autoOpenEnabled.value) {
+      startAutoOpen();
+    }
     return;
   }
 
@@ -239,10 +267,49 @@ const parseScannedUrl = (url: string) => {
       serverNow: ''
     };
     startRefreshTimer();
+    // 如果开启了自动打开，启动倒计时
+    if (autoOpenEnabled.value) {
+      startAutoOpen();
+    }
     return;
   }
 
   parsedUrl.value = null;
+};
+
+// 自动打开链接倒计时
+const startAutoOpen = () => {
+  // 清除之前的倒计时
+  if (countdownTimer) {
+    clearInterval(countdownTimer);
+  }
+  
+  countdown.value = 3; // 3秒倒计时
+  countdownTimer = window.setInterval(() => {
+    countdown.value--;
+    if (countdown.value <= 0) {
+      clearInterval(countdownTimer!);
+      countdownTimer = null;
+      // 打开链接
+      openRealtimeUrl();
+    }
+  }, 1000);
+};
+
+// 取消自动打开
+const cancelAutoOpen = () => {
+  if (countdownTimer) {
+    clearInterval(countdownTimer);
+    countdownTimer = null;
+    countdown.value = 0;
+  }
+};
+
+// 打开实时链接
+const openRealtimeUrl = () => {
+  if (realtimeUrl.value) {
+    window.open(realtimeUrl.value, '_blank');
+  }
 };
 
 // 获取可用的摄像头设备
@@ -369,6 +436,7 @@ const restartScan = () => {
   scannedResult.value = '';
   parsedUrl.value = null;
   stopRefreshTimer();
+  cancelAutoOpen();
   realtimeUrl.value = '';
 };
 
@@ -420,6 +488,7 @@ const handleFileUpload = (event: Event) => {
 onBeforeUnmount(() => {
   stopCamera();
   stopRefreshTimer();
+  cancelAutoOpen();
 });
 </script>
 
@@ -857,6 +926,109 @@ onBeforeUnmount(() => {
 .btn-upload:hover {
   background: rgba(255, 255, 255, 0.2);
   border-color: rgba(255, 255, 255, 0.5);
+}
+
+/* 自动打开开关 */
+.auto-open-toggle {
+  margin-top: 12px;
+  padding: 12px 16px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+}
+
+.toggle-switch {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+}
+
+.toggle-switch input {
+  display: none;
+}
+
+.toggle-slider {
+  position: relative;
+  width: 44px;
+  height: 24px;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 12px;
+  transition: background 0.3s;
+}
+
+.toggle-slider::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  background: white;
+  border-radius: 50%;
+  transition: transform 0.3s;
+}
+
+.toggle-switch input:checked + .toggle-slider {
+  background: #10b981;
+}
+
+.toggle-switch input:checked + .toggle-slider::after {
+  transform: translateX(20px);
+}
+
+.toggle-label {
+  font-size: 13px;
+  opacity: 0.9;
+}
+
+/* 倒计时 */
+.countdown-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 16px;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  border-radius: 12px;
+  margin-bottom: 14px;
+  color: white;
+}
+
+.countdown-ring {
+  width: 60px;
+  height: 60px;
+  border: 4px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: spin 1s linear infinite;
+}
+
+.countdown-num {
+  font-size: 24px;
+  font-weight: bold;
+  animation: none;
+}
+
+.countdown-box p {
+  margin: 10px 0;
+  font-size: 14px;
+}
+
+.btn-cancel {
+  padding: 6px 16px;
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 16px;
+  color: white;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-cancel:hover {
+  background: rgba(255, 255, 255, 0.3);
 }
 
 /* 错误提示 */
