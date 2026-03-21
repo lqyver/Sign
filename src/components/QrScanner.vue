@@ -774,57 +774,55 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
-/* 苹果液态玻璃效果 (Liquid Glass) - 增强版 */
+/* 苹果液态玻璃效果 (Liquid Glass) - 超通透版 */
 .qr-scanner {
   position: relative;
-  background: rgba(255, 255, 255, 0.12);
-  backdrop-filter: blur(50px) saturate(200%);
-  -webkit-backdrop-filter: blur(50px) saturate(200%);
+  background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(80px) saturate(160%) brightness(1.15);
+  -webkit-backdrop-filter: blur(80px) saturate(160%) brightness(1.15);
   border-radius: 32px;
   padding: 28px;
   margin: 24px auto;
   max-width: 420px;
   color: #1f2937;
-  box-shadow: 
-    inset 0 1.5px 0 rgba(255, 255, 255, 0.55),
-    inset 0 -1px 0 rgba(255, 255, 255, 0.12),
-    0 4px 24px rgba(0, 0, 0, 0.04),
-    0 16px 48px rgba(0, 0, 0, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.35),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.05),
+    0 8px 32px rgba(0, 0, 0, 0.25),
+    0 32px 64px rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   overflow: hidden;
 }
 
-/* 强光泽层 - 模拟玻璃反光 */
+/* 柔和光泽层 - 模拟玻璃反光 */
 .qr-scanner::before {
   content: '';
   position: absolute;
   top: 0;
-  left: -50%;
-  right: -50%;
-  height: 70%;
+  left: 0;
+  right: 0;
+  height: 40%;
   background: linear-gradient(
     180deg,
-    rgba(255, 255, 255, 0.7) 0%,
-    rgba(255, 255, 255, 0.3) 30%,
-    rgba(255, 255, 255, 0.05) 60%,
+    rgba(255, 255, 255, 0.5) 0%,
+    rgba(255, 255, 255, 0.15) 50%,
     transparent 100%
   );
-  transform: skewX(-15deg);
   pointer-events: none;
 }
 
-/* 底部反光晕 */
+/* 底部微光 */
 .qr-scanner::after {
   content: '';
   position: absolute;
-  bottom: -20%;
-  left: 0;
-  right: 0;
+  bottom: -30%;
+  left: 30%;
+  right: 30%;
   height: 50%;
   background: radial-gradient(
     ellipse at center,
-    rgba(255, 255, 255, 0.25) 0%,
-    transparent 60%
+    rgba(255, 255, 255, 0.08) 0%,
+    transparent 50%
   );
   pointer-events: none;
 }

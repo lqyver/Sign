@@ -207,43 +207,115 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
-/* 适合液态玻璃的背景 */
+/* 动态网格点阵 + 彩色 Blob 背景 */
 .page-container {
   min-height: 100vh;
   padding: 40px 20px;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  background: 
-    radial-gradient(ellipse at 20% 30%, rgba(102, 126, 234, 0.15) 0%, transparent 50%),
-    radial-gradient(ellipse at 80% 70%, rgba(118, 75, 162, 0.12) 0%, transparent 50%),
-    radial-gradient(ellipse at 50% 50%, rgba(16, 185, 129, 0.08) 0%, transparent 60%),
-    linear-gradient(135deg, #f0f4f8 0%, #e8eef4 50%, #f5f7fa 100%);
-  background-attachment: fixed;
+  position: relative;
+  background-color: #000;
+  overflow: hidden;
 }
 
+.page-container::before {
+  content: "";
+  position: fixed;
+  inset: -1em;
+  z-index: 0;
+  --c: 7px;
+  background-color: #000;
+  background-image: radial-gradient(
+      circle at 50% 50%,
+      #0000 1.5px,
+      #000 0 var(--c),
+      #0000 var(--c)
+    ),
+    radial-gradient(
+      circle at 50% 50%,
+      #0000 1.5px,
+      #000 0 var(--c),
+      #0000 var(--c)
+    ),
+    radial-gradient(circle at 50% 50%, #f00, #f000 60%),
+    radial-gradient(circle at 50% 50%, #ff0, #ff00 60%),
+    radial-gradient(circle at 50% 50%, #0f0, #0f00 60%),
+    radial-gradient(ellipse at 50% 50%, #00f, #00f0 60%);
+  background-size:
+    12px 20.7846097px,
+    12px 20.7846097px,
+    200% 200%,
+    200% 200%,
+    200% 200%,
+    200% 20.7846097px;
+  --p: 0px 0px, 6px 10.39230485px;
+  background-position:
+    var(--p),
+    0% 0%,
+    0% 0%,
+    0% 0px;
+  animation:
+    wee 40s linear infinite,
+    filt 6s linear infinite;
+}
+
+@keyframes filt {
+  0% {
+    filter: hue-rotate(0deg);
+  }
+  to {
+    filter: hue-rotate(360deg);
+  }
+}
+
+@keyframes wee {
+  0% {
+    background-position:
+      var(--p),
+      800% 400%,
+      1000% -400%,
+      -1200% -600%,
+      400% 41.5692194px;
+  }
+  to {
+    background-position:
+      var(--p),
+      0% 0%,
+      0% 0%,
+      0% 0%,
+      0% 0%;
+  }
+}
+
+/* 标题在动态背景上 */
 h1 {
   text-align: center;
-  color: #1a1a2e;
+  color: #ffffff;
   font-size: 28px;
   font-weight: 600;
   letter-spacing: -0.5px;
   margin-bottom: 12px;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+  position: relative;
+  z-index: 1;
 }
 
 .page-subtitle {
   text-align: center;
   max-width: 600px;
   margin: 0 auto 40px auto;
-  color: #6b7280;
+  color: rgba(255, 255, 255, 0.8);
   font-size: 15px;
   line-height: 1.6;
+  position: relative;
+  z-index: 1;
 }
 
 .comparison-grid {
   display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
+  flex-direction: column;
+  align-items: center;
   gap: 24px;
-  max-width: 1200px;
+  max-width: 480px;
   margin: 0 auto;
 }
 
@@ -255,51 +327,50 @@ h1 {
   padding: 32px;
   border-radius: 32px;
   text-align: center;
-  background: rgba(255, 255, 255, 0.15);
-  backdrop-filter: blur(50px) saturate(200%);
-  -webkit-backdrop-filter: blur(50px) saturate(200%);
-  border: 1px solid rgba(255, 255, 255, 0.5);
-  box-shadow: 
-    inset 0 1.5px 0 rgba(255, 255, 255, 0.6),
-    inset 0 -1px 0 rgba(255, 255, 255, 0.15),
-    0 4px 24px rgba(0, 0, 0, 0.04),
-    0 16px 48px rgba(0, 0, 0, 0.08);
+  background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(80px) saturate(160%) brightness(1.15);
+  -webkit-backdrop-filter: blur(80px) saturate(160%) brightness(1.15);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.35),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.05),
+    0 8px 32px rgba(0, 0, 0, 0.25),
+    0 32px 64px rgba(0, 0, 0, 0.35);
   position: relative;
   overflow: hidden;
   transition: transform 0.3s ease, box-shadow 0.3s ease;
+  z-index: 1;
 }
 
-/* 强光泽层 - 模拟玻璃反光 */
+/* 柔和光泽层 - 模拟玻璃反光 */
 .sign-container::before {
   content: '';
   position: absolute;
   top: 0;
-  left: -50%;
-  right: -50%;
-  height: 70%;
+  left: 0;
+  right: 0;
+  height: 40%;
   background: linear-gradient(
     180deg,
-    rgba(255, 255, 255, 0.7) 0%,
-    rgba(255, 255, 255, 0.3) 30%,
-    rgba(255, 255, 255, 0.05) 60%,
+    rgba(255, 255, 255, 0.5) 0%,
+    rgba(255, 255, 255, 0.15) 50%,
     transparent 100%
   );
-  transform: skewX(-15deg);
   pointer-events: none;
 }
 
-/* 底部反光晕 */
+/* 底部微光 */
 .sign-container::after {
   content: '';
   position: absolute;
-  bottom: -20%;
-  left: 0;
-  right: 0;
+  bottom: -30%;
+  left: 30%;
+  right: 30%;
   height: 50%;
   background: radial-gradient(
     ellipse at center,
-    rgba(255, 255, 255, 0.25) 0%,
-    transparent 60%
+    rgba(255, 255, 255, 0.08) 0%,
+    transparent 50%
   );
   pointer-events: none;
 }
@@ -312,16 +383,16 @@ h1 {
 
 .sign-container:hover {
   transform: translateY(-4px) scale(1.005);
-  box-shadow: 
-    inset 0 1.5px 0 rgba(255, 255, 255, 0.6),
-    inset 0 -1px 0 rgba(255, 255, 255, 0.15),
-    0 8px 32px rgba(0, 0, 0, 0.06),
-    0 24px 64px rgba(0, 0, 0, 0.12);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.4),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.05),
+    0 12px 40px rgba(0, 0, 0, 0.3),
+    0 40px 80px rgba(0, 0, 0, 0.4);
 }
 
 .sign-container.recommended {
-  background: rgba(255, 255, 255, 0.2);
-  border: 1px solid rgba(16, 185, 129, 0.3);
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.25);
 }
 
 /* 简约推荐标签 */
