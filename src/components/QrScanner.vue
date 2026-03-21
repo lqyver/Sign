@@ -282,7 +282,9 @@ const stopRefreshTimer = () => {
 };
 
 // 解析扫描到的URL
-const parseScannedUrl = (url: string) => {
+const parseScannedUrl = (url: string, source: 'camera' | 'upload' = 'camera') => {
+  console.log(`[ParseScannedUrl] 解析URL，来源: ${source}`);
+  
   const fullMatch = url.match(/(https?:\/\/.+\/signin_op)\/([^/]+)\/(\d+)\/(\d+)/);
   if (fullMatch) {
     parsedUrl.value = {
@@ -293,7 +295,7 @@ const parseScannedUrl = (url: string) => {
     startRefreshTimer();
     // 如果开启了自动打开，启动倒计时
     if (autoOpenEnabled.value) {
-      startAutoOpen();
+      startAutoOpen(source);
     }
     return;
   }
@@ -308,7 +310,7 @@ const parseScannedUrl = (url: string) => {
     startRefreshTimer();
     // 如果开启了自动打开，启动倒计时
     if (autoOpenEnabled.value) {
-      startAutoOpen();
+      startAutoOpen(source);
     }
     return;
   }
@@ -317,20 +319,31 @@ const parseScannedUrl = (url: string) => {
 };
 
 // 自动打开链接倒计时
-const startAutoOpen = () => {
+const startAutoOpen = (source: 'camera' | 'upload' = 'camera') => {
   // 清除之前的倒计时
   if (countdownTimer) {
     clearInterval(countdownTimer);
   }
   
+  console.log(`[AutoOpen] 启动倒计时，来源: ${source}, 开关状态: ${autoOpenEnabled.value}`);
+  
   countdown.value = 3; // 3秒倒计时
   countdownTimer = window.setInterval(() => {
     countdown.value--;
+    console.log(`[AutoOpen] 倒计时: ${countdown.value}`);
+    
     if (countdown.value <= 0) {
       clearInterval(countdownTimer!);
       countdownTimer = null;
       // 打开链接
-      openRealtimeUrl();
+      console.log('[AutoOpen] 倒计时结束，尝试打开链接');
+      const opened = openRealtimeUrl();
+      
+      // 如果是上传方式且被拦截，提示用户
+      if (!opened && source === 'upload') {
+        errorMessage.value = '浏览器阻止了自动打开，请点击"立即打开"按钮';
+        setTimeout(() => errorMessage.value = '', 5000);
+      }
     }
   }, 1000);
 };
@@ -345,9 +358,21 @@ const cancelAutoOpen = () => {
 };
 
 // 打开实时链接
-const openRealtimeUrl = () => {
-  if (realtimeUrl.value) {
-    window.open(realtimeUrl.value, '_blank');
+const openRealtimeUrl = (): boolean => {
+  if (!realtimeUrl.value) return false;
+  
+  try {
+    const newWindow = window.open(realtimeUrl.value, '_blank');
+    // 检查是否被拦截
+    if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
+      console.log('[AutoOpen] 弹窗被浏览器拦截');
+      return false;
+    }
+    console.log('[AutoOpen] 弹窗成功打开');
+    return true;
+  } catch (e) {
+    console.log('[AutoOpen] 打开链接失败:', e);
+    return false;
   }
 };
 
@@ -471,7 +496,7 @@ const startScanning = () => {
     
     if (code) {
       scannedResult.value = code.data;
-      parseScannedUrl(code.data);
+      parseScannedUrl(code.data, 'camera');
       stopCamera();
     }
   }, 200);
@@ -685,7 +710,7 @@ const handleFileUpload = (event: Event) => {
 
       if (result) {
         scannedResult.value = result;
-        parseScannedUrl(result);
+        parseScannedUrl(result, 'upload');
         errorMessage.value = '';
       } else {
         errorMessage.value = '无法识别图片中的二维码，请尝试：1.裁剪二维码区域 2.提高图片清晰度 3.使用摄像头直接扫描';
