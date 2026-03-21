@@ -14,7 +14,6 @@
       <!-- =================================================================== -->
       <div class="sign-container">
         <h2>方法一：行为模拟</h2>
-        <p class="subtitle">此方案基于猜测，认为两个时间戳都需要实时生成。</p>
 
         <div class="input-section">
           <label for="url-input-A">1. 粘贴签到链接:</label>
@@ -52,7 +51,6 @@
       <div class="sign-container recommended">
         <div class="ribbon"><span>推荐</span></div>
         <h2>方法二：精确复现</h2>
-        <p class="subtitle">此方案基于JS文件分析，精确刷新所需的时间戳。</p>
 
         <div class="input-section">
           <label for="url-input-B">1. 粘贴原始签到链接:</label>
@@ -87,22 +85,6 @@
       </div>
     </div>
 
-    <!-- =================================================================== -->
-    <!--                            分析总结                               -->
-    <!-- =================================================================== -->
-    <div class="summary-box">
-      <h3>核心差异分析</h3>
-      <p>
-        通过分析目标网站的JS文件 <code>SigninOp-Ce7pM04j (1).js</code>，我们发现签到URL <code>.../{ID}/{timestamp}/{server_now_validate}</code> 中的两个时间戳作用不同：
-      </p>
-      <ul>
-        <li><code>timestamp</code> (第一个时间戳): 用于 **前端校验**。脚本会将其与当前设备获取的服务器时间做比较，时间差必须在4.5秒内，所以它必须是实时的。</li>
-        <li><code>server_now_validate</code> (第二个时间戳): 用于 **后端校验**。脚本会把它原封不动地编码后提交给服务器。它是一个固定的"令牌"，我们不能修改它。</li>
-      </ul>
-      <p>
-        <strong>结论：</strong> "方法一" 错误地刷新了两个时间戳，可能会导致后端验证失败。"方法二" 精确地只刷新了第一个时间戳，保留了第二个，这与目标脚本的行为完全一致，因此是**正确且可靠的方案**。
-      </p>
-    </div>
   </div>
 </template>
 
@@ -296,13 +278,6 @@ h1 {
   transform: rotate(45deg);
 }
 
-.subtitle {
-  color: #6c757d;
-  margin-top: -10px;
-  margin-bottom: 30px;
-  font-size: 0.9em;
-}
-
 .input-section {
   width: 100%;
   margin-bottom: 25px;
@@ -387,25 +362,5 @@ h1 {
   color: #6c757d;
 }
 
-.summary-box {
-  max-width: 990px;
-  margin: 40px auto 20px auto;
-  padding: 25px;
-  background-color: #ffffff;
-  border-left: 5px solid #007bff;
-  border-radius: 8px;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.05);
-}
-.summary-box h3 {
-  margin-top: 0;
-}
-.summary-box ul {
-  padding-left: 20px;
-}
-.summary-box code {
-  background-color: #e9ecef;
-  padding: 2px 5px;
-  border-radius: 4px;
-  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
-}
+
 </style>
