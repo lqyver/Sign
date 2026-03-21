@@ -1,9 +1,7 @@
 <template>
   <div class="page-container">
     <h1>动态签到二维码方案对比</h1>
-    <p class="page-subtitle">
-      下面并排展示了两种生成实时二维码的方案。右侧的"精确复现"方案是基于JS文件逆向分析后的最终版本，成功率最高。
-    </p>
+    <p class="page-subtitle">扫码识别或粘贴链接，自动生成实时签到二维码</p>
 
     <!-- 二维码扫描功能 -->
     <QrScanner />
@@ -49,7 +47,7 @@
       <!--                      方法二：精确复现 (推荐)                        -->
       <!-- =================================================================== -->
       <div class="sign-container recommended">
-        <div class="ribbon"><span>推荐</span></div>
+        <span class="badge">推荐</span>
         <h2>方法二：精确复现</h2>
 
         <div class="input-section">
@@ -209,158 +207,327 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
+/* 适合液态玻璃的背景 */
 .page-container {
-  padding: 20px;
+  min-height: 100vh;
+  padding: 40px 20px;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  background-color: #f9fafb;
+  background: 
+    radial-gradient(ellipse at 20% 30%, rgba(102, 126, 234, 0.15) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 70%, rgba(118, 75, 162, 0.12) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 50%, rgba(16, 185, 129, 0.08) 0%, transparent 60%),
+    linear-gradient(135deg, #f0f4f8 0%, #e8eef4 50%, #f5f7fa 100%);
+  background-attachment: fixed;
 }
 
 h1 {
   text-align: center;
-  color: #111827;
+  color: #1a1a2e;
+  font-size: 28px;
+  font-weight: 600;
+  letter-spacing: -0.5px;
+  margin-bottom: 12px;
 }
 
 .page-subtitle {
   text-align: center;
-  max-width: 800px;
-  margin: -10px auto 30px auto;
-  color: #4b5563;
+  max-width: 600px;
+  margin: 0 auto 40px auto;
+  color: #6b7280;
+  font-size: 15px;
+  line-height: 1.6;
 }
 
 .comparison-grid {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 30px;
+  gap: 24px;
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
+/* 苹果液态玻璃效果 - 增强版 */
 .sign-container {
   flex: 1;
-  min-width: 380px;
-  max-width: 480px;
-  padding: 30px;
-  border-radius: 16px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+  min-width: 360px;
+  max-width: 440px;
+  padding: 32px;
+  border-radius: 32px;
   text-align: center;
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(50px) saturate(200%);
+  -webkit-backdrop-filter: blur(50px) saturate(200%);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.6),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.15),
+    0 4px 24px rgba(0, 0, 0, 0.04),
+    0 16px 48px rgba(0, 0, 0, 0.08);
   position: relative;
   overflow: hidden;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* 强光泽层 - 模拟玻璃反光 */
+.sign-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -50%;
+  right: -50%;
+  height: 70%;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.7) 0%,
+    rgba(255, 255, 255, 0.3) 30%,
+    rgba(255, 255, 255, 0.05) 60%,
+    transparent 100%
+  );
+  transform: skewX(-15deg);
+  pointer-events: none;
+}
+
+/* 底部反光晕 */
+.sign-container::after {
+  content: '';
+  position: absolute;
+  bottom: -20%;
+  left: 0;
+  right: 0;
+  height: 50%;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(255, 255, 255, 0.25) 0%,
+    transparent 60%
+  );
+  pointer-events: none;
+}
+
+/* 确保内容在光泽层之上 */
+.sign-container > * {
+  position: relative;
+  z-index: 1;
+}
+
+.sign-container:hover {
+  transform: translateY(-4px) scale(1.005);
+  box-shadow: 
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.6),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.15),
+    0 8px 32px rgba(0, 0, 0, 0.06),
+    0 24px 64px rgba(0, 0, 0, 0.12);
 }
 
 .sign-container.recommended {
-  border: 2px solid #10b981;
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(16, 185, 129, 0.3);
 }
 
-.ribbon {
+/* 简约推荐标签 */
+.badge {
   position: absolute;
-  top: -1px;
-  right: -1px;
-  width: 110px;
-  height: 110px;
-  overflow: hidden;
+  top: 20px;
+  right: 20px;
+  padding: 6px 14px;
+  background: rgba(16, 185, 129, 0.12);
+  color: #059669;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  border-radius: 20px;
 }
-.ribbon span {
-  position: absolute;
-  display: block;
-  width: 150px;
-  padding: 8px 0;
-  background-color: #10b981;
-  box-shadow: 0 5px 10px rgba(0,0,0,0.1);
-  color: #fff;
+
+/* 标题样式 */
+.sign-container h2 {
+  color: #1f2937;
+  font-size: 20px;
+  font-weight: 600;
+  margin-bottom: 24px;
+  letter-spacing: -0.3px;
+}
+
+.sign-container h3 {
+  color: #374151;
   font-size: 14px;
-  font-weight: bold;
-  text-shadow: 0 1px 1px rgba(0,0,0,0.2);
-  text-transform: uppercase;
-  text-align: center;
-  right: -32px;
-  top: 25px;
-  transform: rotate(45deg);
+  font-weight: 500;
+  margin-bottom: 16px;
 }
 
+/* 输入区域 - 液态玻璃内嵌效果 */
 .input-section {
   width: 100%;
-  margin-bottom: 25px;
+  margin-bottom: 24px;
 }
 
 .input-section label {
   display: block;
-  margin-bottom: 10px;
-  font-weight: 600;
-  color: #343a40;
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: #4b5563;
   text-align: left;
+  font-size: 13px;
+  letter-spacing: 0.3px;
 }
 
 .input-section input {
   width: 100%;
-  padding: 12px 15px;
-  border: 1px solid #ced4da;
-  border-radius: 8px;
+  padding: 14px 18px;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 16px;
   box-sizing: border-box;
-  font-size: 1em;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  font-size: 14px;
+  background: rgba(0, 0, 0, 0.03);
+  backdrop-filter: blur(10px);
+  color: #1f2937;
+  transition: all 0.25s ease;
+  box-shadow: 
+    inset 0 1px 2px rgba(0, 0, 0, 0.04),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.5);
+}
+
+.input-section input::placeholder {
+  color: #9ca3af;
+}
+
+.input-section input:hover {
+  background: rgba(0, 0, 0, 0.04);
+  border-color: rgba(0, 0, 0, 0.1);
 }
 
 .input-section input:focus {
-  border-color: #007bff;
-  box-shadow: 0 0 0 4px rgba(0, 123, 255, 0.15);
+  background: rgba(255, 255, 255, 0.7);
+  border-color: rgba(16, 185, 129, 0.35);
+  box-shadow: 
+    inset 0 1px 2px rgba(0, 0, 0, 0.03),
+    0 0 0 3px rgba(16, 185, 129, 0.08);
   outline: none;
 }
 
 .error-message {
-  color: #e63946;
-  margin-top: 10px;
-  font-size: 0.9em;
+  color: #ef4444;
+  margin-top: 8px;
+  font-size: 13px;
   text-align: left;
+  padding-left: 4px;
 }
 
+/* 二维码展示区 */
 .qr-display {
-  margin-top: 20px;
-  padding-top: 20px;
-  border-top: 1px solid #e9ecef;
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
 }
 
 .qrcode-wrapper {
-  margin-top: 20px;
-  margin-bottom: 20px;
-  padding: 15px;
-  background: white;
-  border-radius: 8px;
+  margin: 20px auto;
+  padding: 20px;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 20px;
   display: inline-block;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+  box-shadow: 
+    0 1px 2px rgba(0, 0, 0, 0.02),
+    0 8px 20px rgba(0, 0, 0, 0.06);
+  border: 1px solid rgba(0, 0, 0, 0.04);
 }
 
+/* 信息框 - 毛玻璃 */
 .info-box {
-  margin-top: 15px;
+  margin-top: 20px;
   text-align: left;
   word-break: break-all;
-  background-color: #f8f9fa;
-  padding: 15px;
-  border-radius: 8px;
-  font-size: 0.9em;
+  background: rgba(248, 250, 252, 0.6);
+  backdrop-filter: blur(10px);
+  padding: 18px;
+  border-radius: 16px;
+  font-size: 13px;
+  border: 1px solid rgba(0, 0, 0, 0.04);
 }
 
 .info-box p {
-  margin: 8px 0;
+  margin: 10px 0;
+  color: #4b5563;
+  line-height: 1.5;
+}
+
+.info-box strong {
+  color: #1f2937;
+  font-weight: 600;
 }
 
 .url-label {
   display: block;
-  margin-bottom: 5px;
+  margin-bottom: 6px;
+  color: #6b7280;
 }
 
 .url-text {
-  color: #0056b3;
-  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
+  color: #059669;
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  font-size: 12px;
+  background: rgba(16, 185, 129, 0.08);
+  padding: 8px 12px;
+  border-radius: 8px;
+  display: block;
+  margin-top: 6px;
 }
 
+/* 占位符 - 简约风格 */
 .placeholder {
-  margin-top: 20px;
-  padding: 40px;
-  border: 2px dashed #dee2e6;
-  border-radius: 10px;
-  color: #6c757d;
+  margin-top: 24px;
+  padding: 48px 32px;
+  background: rgba(255, 255, 255, 0.4);
+  backdrop-filter: blur(10px);
+  border: 2px dashed rgba(0, 0, 0, 0.08);
+  border-radius: 20px;
+  color: #9ca3af;
+  font-size: 14px;
 }
 
+/* 实时刷新指示器 */
+.qr-display h3::after {
+  content: '';
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  background: #10b981;
+  border-radius: 50%;
+  margin-left: 8px;
+  animation: pulse 1.5s ease-in-out infinite;
+  box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4);
+}
 
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 8px rgba(16, 185, 129, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+  }
+}
+
+/* 响应式优化 */
+@media (max-width: 768px) {
+  .page-container {
+    padding: 24px 16px;
+  }
+  
+  h1 {
+    font-size: 24px;
+  }
+  
+  .sign-container {
+    min-width: auto;
+    width: 100%;
+    padding: 24px;
+    border-radius: 20px;
+  }
+  
+  .comparison-grid {
+    gap: 16px;
+  }
+}
 </style>

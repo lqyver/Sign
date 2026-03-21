@@ -281,6 +281,39 @@ const stopRefreshTimer = () => {
   }
 };
 
+// 播放成功反馈（振动 + 音效）
+const playSuccessFeedback = () => {
+  // 振动反馈（移动端支持）
+  if (navigator.vibrate) {
+    navigator.vibrate([50, 100, 50]);
+  }
+  
+  // 清脆音效
+  try {
+    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+    
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+    
+    // 清脆的高音
+    oscillator.frequency.setValueAtTime(1200, audioContext.currentTime);
+    oscillator.frequency.exponentialRampToValueAtTime(1800, audioContext.currentTime + 0.1);
+    
+    // 音量包络：快速 attack，短 sustain，快速 decay
+    gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+    gainNode.gain.linearRampToValueAtTime(0.3, audioContext.currentTime + 0.01);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.15);
+    
+    oscillator.type = 'sine';
+    oscillator.start(audioContext.currentTime);
+    oscillator.stop(audioContext.currentTime + 0.15);
+  } catch (e) {
+    console.log('音效播放失败:', e);
+  }
+};
+
 // 解析扫描到的URL
 const parseScannedUrl = (url: string, source: 'camera' | 'upload' = 'camera') => {
   console.log(`[ParseScannedUrl] 解析URL，来源: ${source}`);
@@ -293,6 +326,8 @@ const parseScannedUrl = (url: string, source: 'camera' | 'upload' = 'camera') =>
       serverNow: fullMatch[4]
     };
     startRefreshTimer();
+    // 播放成功反馈
+    playSuccessFeedback();
     // 如果开启了自动打开，启动倒计时
     if (autoOpenEnabled.value) {
       startAutoOpen(source);
@@ -308,6 +343,8 @@ const parseScannedUrl = (url: string, source: 'camera' | 'upload' = 'camera') =>
       serverNow: ''
     };
     startRefreshTimer();
+    // 播放成功反馈
+    playSuccessFeedback();
     // 如果开启了自动打开，启动倒计时
     if (autoOpenEnabled.value) {
       startAutoOpen(source);
@@ -737,14 +774,65 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
+/* 苹果液态玻璃效果 (Liquid Glass) - 增强版 */
 .qr-scanner {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 20px;
-  padding: 24px;
-  margin: 20px auto;
+  position: relative;
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(50px) saturate(200%);
+  -webkit-backdrop-filter: blur(50px) saturate(200%);
+  border-radius: 32px;
+  padding: 28px;
+  margin: 24px auto;
   max-width: 420px;
-  color: white;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+  color: #1f2937;
+  box-shadow: 
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.55),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.12),
+    0 4px 24px rgba(0, 0, 0, 0.04),
+    0 16px 48px rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  overflow: hidden;
+}
+
+/* 强光泽层 - 模拟玻璃反光 */
+.qr-scanner::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -50%;
+  right: -50%;
+  height: 70%;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.7) 0%,
+    rgba(255, 255, 255, 0.3) 30%,
+    rgba(255, 255, 255, 0.05) 60%,
+    transparent 100%
+  );
+  transform: skewX(-15deg);
+  pointer-events: none;
+}
+
+/* 底部反光晕 */
+.qr-scanner::after {
+  content: '';
+  position: absolute;
+  bottom: -20%;
+  left: 0;
+  right: 0;
+  height: 50%;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(255, 255, 255, 0.25) 0%,
+    transparent 60%
+  );
+  pointer-events: none;
+}
+
+/* 确保内容在光泽层之上 */
+.qr-scanner > * {
+  position: relative;
+  z-index: 1;
 }
 
 /* 头部 */
@@ -754,36 +842,41 @@ onBeforeUnmount(() => {
 }
 
 .header-icon {
-  font-size: 48px;
+  font-size: 40px;
   margin-bottom: 8px;
+  opacity: 0.8;
 }
 
 .scanner-header h3 {
   margin: 0;
-  font-size: 22px;
+  font-size: 20px;
   font-weight: 600;
+  color: #1f2937;
+  letter-spacing: -0.3px;
 }
 
 .header-desc {
   margin: 6px 0 0;
-  opacity: 0.9;
-  font-size: 14px;
+  color: #6b7280;
+  font-size: 13px;
 }
 
 /* 扫描区域 */
 .scan-area {
-  background: rgba(255, 255, 255, 0.15);
-  border-radius: 16px;
+  background: rgba(243, 244, 246, 0.6);
+  border-radius: 20px;
   padding: 16px;
   backdrop-filter: blur(10px);
+  border: 1px solid rgba(0, 0, 0, 0.04);
 }
 
 .camera-box {
   position: relative;
   aspect-ratio: 1;
-  background: #000;
-  border-radius: 12px;
+  background: #111827;
+  border-radius: 16px;
   overflow: hidden;
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
 .camera-feed {
@@ -800,16 +893,17 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: center;
   gap: 16px;
+  background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
 }
 
 .placeholder-icon {
-  font-size: 64px;
-  opacity: 0.5;
+  font-size: 56px;
+  opacity: 0.4;
 }
 
 .hint-text {
   font-size: 13px;
-  opacity: 0.7;
+  color: #9ca3af;
 }
 
 /* 扫描框 */
@@ -940,18 +1034,19 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 16px;
-  background: rgba(255, 255, 255, 0.2);
+  padding: 10px 18px;
+  background: rgba(0, 0, 0, 0.05);
   border: none;
   border-radius: 20px;
-  color: white;
+  color: #4b5563;
   font-size: 13px;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: all 0.2s;
 }
 
 .btn-text:hover {
-  background: rgba(255, 255, 255, 0.3);
+  background: rgba(0, 0, 0, 0.1);
+  color: #1f2937;
 }
 
 /* 设备选择 */
@@ -961,52 +1056,55 @@ onBeforeUnmount(() => {
 
 .device-select {
   width: 100%;
-  padding: 10px 14px;
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.15);
-  color: white;
+  padding: 12px 16px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(10px);
+  color: #374151;
   font-size: 13px;
   cursor: pointer;
   outline: none;
 }
 
 .device-select option {
-  background: #333;
-  color: white;
+  background: #f9fafb;
+  color: #1f2937;
 }
 
 /* 按钮 */
 .btn-primary {
   padding: 12px 28px;
-  background: #10b981;
+  background: #111827;
   border: none;
-  border-radius: 25px;
+  border-radius: 12px;
   color: white;
-  font-size: 15px;
-  font-weight: 600;
+  font-size: 14px;
+  font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .btn-primary:hover {
-  background: #059669;
+  background: #1f2937;
   transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 .btn-secondary {
   padding: 10px 20px;
-  background: rgba(255, 255, 255, 0.2);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  border-radius: 20px;
-  color: white;
+  background: rgba(0, 0, 0, 0.05);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 12px;
+  color: #4b5563;
   font-size: 14px;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: all 0.2s;
 }
 
 .btn-secondary:hover {
-  background: rgba(255, 255, 255, 0.3);
+  background: rgba(0, 0, 0, 0.08);
+  color: #1f2937;
 }
 
 /* 结果面板 */
@@ -1129,11 +1227,11 @@ onBeforeUnmount(() => {
 }
 
 .result-actions .btn-primary {
-  background: #667eea;
+  background: #111827;
 }
 
 .result-actions .btn-primary:hover {
-  background: #5a67d8;
+  background: #1f2937;
 }
 
 .result-actions .btn-secondary {
@@ -1158,26 +1256,29 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  background: rgba(255, 255, 255, 0.1);
-  border: 2px dashed rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.5);
+  border: 2px dashed rgba(0, 0, 0, 0.12);
   border-radius: 12px;
-  color: white;
+  color: #4b5563;
   font-size: 14px;
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .btn-upload:hover {
-  background: rgba(255, 255, 255, 0.2);
-  border-color: rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.8);
+  border-color: rgba(0, 0, 0, 0.2);
+  color: #1f2937;
 }
 
 /* 自动打开开关 */
 .auto-open-toggle {
   margin-top: 12px;
-  padding: 12px 16px;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 10px;
+  padding: 14px 18px;
+  background: rgba(243, 244, 246, 0.6);
+  backdrop-filter: blur(10px);
+  border-radius: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.04);
 }
 
 .toggle-switch {
@@ -1195,7 +1296,7 @@ onBeforeUnmount(() => {
   position: relative;
   width: 44px;
   height: 24px;
-  background: rgba(255, 255, 255, 0.3);
+  background: rgba(0, 0, 0, 0.15);
   border-radius: 12px;
   transition: background 0.3s;
 }
@@ -1222,7 +1323,7 @@ onBeforeUnmount(() => {
 
 .toggle-label {
   font-size: 13px;
-  opacity: 0.9;
+  color: #4b5563;
 }
 
 /* 倒计时 */
@@ -1230,18 +1331,19 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 16px;
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-  border-radius: 12px;
+  padding: 20px;
+  background: rgba(16, 185, 129, 0.1);
+  border-radius: 16px;
   margin-bottom: 14px;
-  color: white;
+  color: #059669;
+  border: 1px solid rgba(16, 185, 129, 0.15);
 }
 
 .countdown-ring {
-  width: 60px;
-  height: 60px;
-  border: 4px solid rgba(255, 255, 255, 0.3);
-  border-top-color: white;
+  width: 56px;
+  height: 56px;
+  border: 3px solid rgba(16, 185, 129, 0.2);
+  border-top-color: #10b981;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -1250,29 +1352,31 @@ onBeforeUnmount(() => {
 }
 
 .countdown-num {
-  font-size: 24px;
-  font-weight: bold;
+  font-size: 22px;
+  font-weight: 600;
   animation: none;
+  color: #059669;
 }
 
 .countdown-box p {
-  margin: 10px 0;
+  margin: 12px 0 8px;
   font-size: 14px;
+  color: #374151;
 }
 
 .btn-cancel {
-  padding: 6px 16px;
-  background: rgba(255, 255, 255, 0.2);
-  border: 1px solid rgba(255, 255, 255, 0.5);
-  border-radius: 16px;
-  color: white;
+  padding: 8px 16px;
+  background: rgba(16, 185, 129, 0.15);
+  border: none;
+  border-radius: 8px;
+  color: #059669;
   font-size: 13px;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: all 0.2s;
 }
 
 .btn-cancel:hover {
-  background: rgba(255, 255, 255, 0.3);
+  background: rgba(16, 185, 129, 0.25);
 }
 
 /* 错误提示 */
@@ -1311,23 +1415,25 @@ onBeforeUnmount(() => {
 /* 微信打开提示 */
 .weixin-hint {
   margin-top: 16px;
-  padding: 16px;
-  background: linear-gradient(135deg, #07c160 0%, #05a050 100%);
-  border-radius: 12px;
-  color: white;
+  padding: 18px;
+  background: rgba(7, 193, 96, 0.08);
+  border-radius: 16px;
+  border: 1px solid rgba(7, 193, 96, 0.12);
 }
 
 .hint-header {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 15px;
+  font-size: 14px;
   margin-bottom: 10px;
+  color: #059669;
+  font-weight: 500;
 }
 
 .hint-text {
   font-size: 13px;
-  opacity: 0.95;
+  color: #4b5563;
   margin-bottom: 12px;
 }
 
@@ -1345,28 +1451,29 @@ onBeforeUnmount(() => {
   justify-content: center;
   gap: 6px;
   background: white;
-  border: none;
-  border-radius: 8px;
+  border: 1px solid rgba(7, 193, 96, 0.2);
+  border-radius: 10px;
   color: #07c160;
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .hint-btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  background: rgba(7, 193, 96, 0.05);
+  border-color: rgba(7, 193, 96, 0.3);
 }
 
 .hint-btn.secondary {
-  background: rgba(255, 255, 255, 0.2);
-  color: white;
+  background: rgba(7, 193, 96, 0.1);
+  border-color: transparent;
+  color: #059669;
 }
 
 .hint-note {
   font-size: 11px;
-  opacity: 0.8;
+  color: #9ca3af;
   margin: 0;
 }
 
